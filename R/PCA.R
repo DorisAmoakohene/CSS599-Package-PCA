@@ -9,45 +9,62 @@
 #' @return A matrix containing the projected data onto the selected principal components
 #' @export
 #'
-#' @examples #Example dataset
-#' PCA.dat <- matrix(c(2, 4, 1, 3, 5, 7, 6, 8, 9), nrow = 3, ncol = 3, byrow = TRUE)
-#' test.dat <- as.numeric(PCA.dat)
-#' result.PCA <- PCA(test.dat, k = 2)
-#' print(result.PCA)
-#' PCA
+#' @examples
+#' # Load the iris dataset
+#'
+#' data(iris)
+#'
+#' #Extract the numerical features from the iris dataset
+#' X <- iris[, 1:4]
+#'
+#' #Apply PCA
+#' result <- pca(X, k = 2)
+#'
+#' #Extract the transformed data
+#' transformed_data <- result$transformed_data
+#'
+#' # Plot the transformed data
+#' plot(transformed_data, col = iris$Species, pch = 19, xlab = "PC1", ylab = "PC2")
+#'
+#' # Add legend
+#' legend("topright", legend = levels(iris$Species), col = 1:3, pch = 19)
+#'
+#' # Plot the eigenvectors
+#' arrows(0, 0, result$eigenvectors[1, ], result$eigenvectors[2, ], length = 0.1, col = "blue")
 #'
 
-PCA<- function(X, k) {
-  # Step 1: Data Preprocessing
-  X_std <- scale(X)
+pca <- function(X, k) {
+  # Step 1: Compute the mean vector
+  mu <- colMeans(X)
 
-  # Step 2: Compute the Covariance Matrix
-  cov_matrix <- cov(X_std)
+  # Step 2: Center the data
+  X_centered <- scale(X, center = TRUE, scale = FALSE)
 
-  # Step 3: Compute Eigenvectors and Eigenvalues
+  # Step 3: Compute the covariance matrix
+  cov_matrix <- cov(X_centered)
+
+  # Step 4: Compute eigenvectors and eigenvalues
   eigen_result <- eigen(cov_matrix)
   eigenvalues <- eigen_result$values
   eigenvectors <- eigen_result$vectors
 
-  # Step 4: Sort the Eigenvalues
-  eigen_pairs <- data.frame(eigenvalues, eigenvectors)
-  eigen_pairs <- eigen_pairs[order(eigen_pairs$eigenvalues, decreasing = TRUE), ]
+  # Step 5: Select the top k eigenvectors
+  selected_eigenvectors <- eigenvectors[, 1:k]
 
-  # Check if the number of columns in eigen_pairs is larger than k
-  if (ncol(eigen_pairs) < k) {
-    warning("The number of principal components is greater than the number of eigenvectors.")
-    k <- ncol(eigen_pairs) # Adjust k to the maximum possible value
-  }
+  # Step 6: Project the data onto the lower-dimensional subspace
+  transformed_data <- X_centered %*% selected_eigenvectors
 
-  # Step 5: Select the Principal Components
-  principal_components <- eigen_pairs[, 1:k]
+  # Step 7: Reconstruct the data
+  reconstructed_data <- transformed_data %*% t(selected_eigenvectors) + mu
 
-  # Step 6: Data Projection
-  projected_data <- as.matrix(X_std) %*%
-    as.matrix(principal_components)
-
-
-  return(projected_data)
+  # Return the results
+  return(list(
+    mean_vector = mu,
+    eigenvectors = selected_eigenvectors,
+    eigenvalues = eigenvalues[1:k],
+    transformed_data = transformed_data,
+    reconstructed_data = reconstructed_data
+  ))
 }
 
 
